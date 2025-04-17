@@ -2,18 +2,28 @@
 from flask import Flask, request, jsonify
 import requests
 import sqlite3
+import os
 
 # Initialize Flask app
 app = Flask(__name__)
 
-# Replace with your OpenWeatherMap API key
-API_KEY = 'e7338b007df85f7b48c56a9ece3bf371'
+# Replace with your OpenWeatherMap API key (set via environment variable for Heroku)
+API_KEY = os.getenv('API_KEY', 'e7338b007df85f7b48c56a9ece3bf371')
 
 # Initialize SQLite database
 def init_db():
     conn = sqlite3.connect('weather.db')
     conn.execute('CREATE TABLE IF NOT EXISTS cache (city TEXT PRIMARY KEY, weather TEXT)')
     conn.close()
+
+# GET: Root endpoint to avoid "Not Found" error
+@app.route('/', methods=['GET'])
+def home():
+    return jsonify({
+        'message': 'Welcome to the Weather API',
+        'endpoint': '/weather?city=<city_name>',
+        'example': '/weather?city=London'
+      })
 
 # GET: Fetch weather for a city
 @app.route('/weather', methods=['GET'])
@@ -23,7 +33,7 @@ def get_weather():
     if not city:
         return jsonify({'error': 'City is required'}), 400
 
-     # Check cache
+    # Check cache
     conn = sqlite3.connect('weather.db')
     cursor = conn.cursor()
     cursor.execute('SELECT weather FROM cache WHERE city = ?', (city,))
@@ -50,4 +60,5 @@ def get_weather():
 # Run the app
 if __name__ == '__main__':
     init_db()
-    app.run(host='0.0.0.0', port=5000)
+    port = int(os.getenv('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
